@@ -51,37 +51,23 @@ jobs:
           streamdeck pack com.pmilano1.simplestockticker.sdPlugin -o .
           ls -lh com.pmilano1.simplestockticker.streamDeckPlugin
       
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create Release with GitHub CLI
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Simple Stock Ticker v${{ steps.get_version.outputs.version }}
-          body: |
-            ## Simple Stock Ticker v${{ steps.get_version.outputs.version }}
-            
-            ### Installation
-            1. Download the `.streamDeckPlugin` file below
-            2. Double-click to install in Stream Deck
-            
-            ### What's New
-            See the commit history for changes in this release.
-            
-            ---
-            
-            **Full Changelog**: https://github.com/pmilano1/streamdeck-simple-stock-ticker/commits/v${{ steps.get_version.outputs.version }}
-          draft: false
-          prerelease: false
-      
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./com.pmilano1.simplestockticker.streamDeckPlugin
-          asset_name: com.pmilano1.simplestockticker.streamDeckPlugin
-          asset_content_type: application/octet-stream
+        run: |
+          gh release create v${{ steps.get_version.outputs.version }} \
+            ./com.pmilano1.simplestockticker.streamDeckPlugin \
+            --title "Simple Stock Ticker v${{ steps.get_version.outputs.version }}" \
+            --notes "## Simple Stock Ticker v${{ steps.get_version.outputs.version }}
+
+          ### Installation
+          1. Download the \`.streamDeckPlugin\` file below
+          2. Double-click to install in Stream Deck
+
+          ### What's New
+          See the commit history for changes in this release.
+
+          ---
+
+          **Full Changelog**: https://github.com/pmilano1/streamdeck-simple-stock-ticker/commits/v${{ steps.get_version.outputs.version }}"
 
