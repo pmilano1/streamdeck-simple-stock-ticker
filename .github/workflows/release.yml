@@ -12,38 +12,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        with:
+          path: com.pmilano1.simplestockticker.sdPlugin
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install dependencies
+        working-directory: com.pmilano1.simplestockticker.sdPlugin
         run: npm ci
-      
+
       - name: Run tests
+        working-directory: com.pmilano1.simplestockticker.sdPlugin
         run: npm test
-      
+
       - name: Install Stream Deck CLI
         run: npm install -g @elgato/cli
-      
+
       - name: Extract version from tag
         id: get_version
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
-      
+
       - name: Update manifest version
+        working-directory: com.pmilano1.simplestockticker.sdPlugin
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
           # Update the version in manifest.json
           sed -i "s/\"Version\": \".*\"/\"Version\": \"$VERSION\"/" manifest.json
           cat manifest.json | grep Version
-      
+
       - name: Build plugin package
         run: |
-          cd ..
           streamdeck pack com.pmilano1.simplestockticker.sdPlugin -o .
           ls -lh com.pmilano1.simplestockticker.streamDeckPlugin
       
@@ -77,7 +81,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ../com.pmilano1.simplestockticker.streamDeckPlugin
+          asset_path: ./com.pmilano1.simplestockticker.streamDeckPlugin
           asset_name: com.pmilano1.simplestockticker.streamDeckPlugin
           asset_content_type: application/octet-stream
 
