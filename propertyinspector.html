@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Stock Ticker Settings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            background-color: #2d2d2d;
+            color: #d8d8d8;
+        }
+        .sdpi-item {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+            background-color: #3d3d3d;
+            border: 1px solid #5d5d5d;
+            color: #d8d8d8;
+            font-size: 12px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #0e6fc5;
+        }
+        .info {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sdpi-item">
+        <label for="symbol">Stock Symbol</label>
+        <input type="text" id="symbol" placeholder="e.g., AAPL, TSLA, MSFT" value="AAPL">
+        <div class="info">Enter the stock ticker symbol (e.g., AAPL, TSLA, MSFT)</div>
+    </div>
+
+    <script>
+        let websocket = null;
+        let uuid = null;
+        let actionInfo = {};
+
+        function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+            uuid = inUUID;
+            actionInfo = JSON.parse(inActionInfo);
+            
+            websocket = new WebSocket('ws://127.0.0.1:' + inPort);
+
+            websocket.onopen = function() {
+                const json = {
+                    event: inRegisterEvent,
+                    uuid: inUUID
+                };
+                websocket.send(JSON.stringify(json));
+
+                // Load saved settings
+                requestSettings();
+            };
+
+            websocket.onmessage = function(evt) {
+                const jsonObj = JSON.parse(evt.data);
+                const event = jsonObj.event;
+                const jsonPayload = jsonObj.payload;
+
+                if (event === 'didReceiveSettings') {
+                    const settings = jsonPayload.settings;
+                    
+                    // Load symbol from settings
+                    if (settings.symbol) {
+                        document.getElementById('symbol').value = settings.symbol;
+                    }
+                }
+            };
+        }
+
+        function requestSettings() {
+            if (websocket && websocket.readyState === 1) {
+                const json = {
+                    event: 'getSettings',
+                    context: uuid
+                };
+                websocket.send(JSON.stringify(json));
+            }
+        }
+
+        function saveSettings() {
+            const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+            
+            if (websocket && websocket.readyState === 1) {
+                const json = {
+                    event: 'setSettings',
+                    context: uuid,
+                    payload: {
+                        symbol: symbol
+                    }
+                };
+                websocket.send(JSON.stringify(json));
+            }
+        }
+
+        // Save settings when symbol changes
+        document.getElementById('symbol').addEventListener('change', saveSettings);
+        document.getElementById('symbol').addEventListener('input', function() {
+            // Auto-uppercase as user types
+            this.value = this.value.toUpperCase();
+        });
+    </script>
+</body>
+</html>
+

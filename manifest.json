@@ -1,0 +1,52 @@
+{
+	"Actions": [
+		{
+			"Icon": "images/icon",
+			"Name": "Simple Stock Ticker",
+			"States": [
+				{
+					"Image": "images/key-green",
+					"TitleAlignment": "middle",
+					"FontSize": 12
+				},
+				{
+					"Image": "images/key-red",
+					"TitleAlignment": "middle",
+					"FontSize": 12
+				}
+			],
+			"PropertyInspectorPath": "propertyinspector.html",
+			"SupportedInMultiActions": false,
+			"Tooltip": "Real-time stock price ticker",
+			"UUID": "com.pmilano1.simplestockticker.action",
+			"DisableAutomaticStates": true,
+			"UserTitleEnabled": false
+		}
+	],
+	"SDKVersion": 2,
+	"Author": "pmilano1",
+	"Category": "Finance",
+	"CategoryIcon": "images/category",
+	"CodePath": "launch.sh",
+	"CodePathWin": "launch.bat",
+	"CodePathMac": "launch.sh",
+	"Description": "Real-time stock price ticker",
+	"Name": "Simple Stock Ticker",
+	"Icon": "images/icon",
+	"URL": "https://github.com/pmilano1/streamdeck-simple-stock-ticker",
+	"UUID": "com.pmilano1.simplestockticker",
+	"Version": "1.0.0.0",
+	"OS": [
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		},
+		{
+			"Platform": "mac",
+			"MinimumVersion": "10.15"
+		}
+	],
+	"Software": {
+		"MinimumVersion": "6.4"
+	}
+}
