@@ -15,21 +15,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        with:
+          path: com.pmilano1.simplestockticker.sdPlugin
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install dependencies
+        working-directory: com.pmilano1.simplestockticker.sdPlugin
         run: npm ci
-      
+
       - name: Run tests
+        working-directory: com.pmilano1.simplestockticker.sdPlugin
         run: npm test
-      
+
       - name: Install Stream Deck CLI
         run: npm install -g @elgato/cli
-      
+
       - name: Validate plugin manifest
-        run: streamdeck validate .
+        run: streamdeck validate com.pmilano1.simplestockticker.sdPlugin
 
