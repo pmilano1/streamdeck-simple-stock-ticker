@@ -31,6 +31,19 @@
             outline: none;
             border-color: #0e6fc5;
         }
+        select {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+            background-color: #3d3d3d;
+            border: 1px solid #5d5d5d;
+            color: #d8d8d8;
+            font-size: 12px;
+        }
+        select:focus {
+            outline: none;
+            border-color: #0e6fc5;
+        }
         .info {
             font-size: 11px;
             color: #999;
@@ -43,6 +56,22 @@
         <label for="symbol">Stock Symbol</label>
         <input type="text" id="symbol" placeholder="e.g., AAPL, TSLA, MSFT" value="AAPL">
         <div class="info">Enter the stock ticker symbol (e.g., AAPL, TSLA, MSFT)</div>
+    </div>
+
+    <div class="sdpi-item">
+        <label for="dataSource">Data Source</label>
+        <select id="dataSource">
+            <option value="yahoo">Yahoo Finance (Free, no after-hours)</option>
+            <option value="alphavantage">Alpha Vantage (Free API key, has after-hours)</option>
+            <option value="finnhub">Finnhub (Free API key, has after-hours)</option>
+        </select>
+        <div class="info">For after-hours prices, use Alpha Vantage or Finnhub</div>
+    </div>
+
+    <div class="sdpi-item" id="apiKeySection" style="display: none;">
+        <label for="apiKey">API Key</label>
+        <input type="text" id="apiKey" placeholder="Enter your API key">
+        <div class="info">Get a free API key from the provider's website</div>
     </div>
 
     <script>
@@ -74,11 +103,26 @@
 
                 if (event === 'didReceiveSettings') {
                     const settings = jsonPayload.settings;
-                    
+
                     // Load symbol from settings
                     if (settings.symbol) {
                         document.getElementById('symbol').value = settings.symbol;
                     }
+
+                    // Load data source from settings
+                    if (settings.dataSource) {
+                        document.getElementById('dataSource').value = settings.dataSource;
+                    } else {
+                        document.getElementById('dataSource').value = 'yahoo';
+                    }
+
+                    // Load API key from settings
+                    if (settings.apiKey) {
+                        document.getElementById('apiKey').value = settings.apiKey;
+                    }
+
+                    // Show/hide API key field based on data source
+                    toggleApiKeyField();
                 }
             };
         }
@@ -93,27 +137,50 @@
             }
         }
 
+        function toggleApiKeyField() {
+            const dataSource = document.getElementById('dataSource').value;
+            const apiKeySection = document.getElementById('apiKeySection');
+
+            // Show API key field for sources that require it
+            if (dataSource === 'alphavantage' || dataSource === 'finnhub') {
+                apiKeySection.style.display = 'block';
+            } else {
+                apiKeySection.style.display = 'none';
+            }
+        }
+
         function saveSettings() {
             const symbol = document.getElementById('symbol').value.trim().toUpperCase();
-            
+            const dataSource = document.getElementById('dataSource').value;
+            const apiKey = document.getElementById('apiKey').value.trim();
+
             if (websocket && websocket.readyState === 1) {
                 const json = {
                     event: 'setSettings',
                     context: uuid,
                     payload: {
-                        symbol: symbol
+                        symbol: symbol,
+                        dataSource: dataSource,
+                        apiKey: apiKey
                     }
                 };
                 websocket.send(JSON.stringify(json));
             }
         }
 
-        // Save settings when symbol changes
+        // Save settings when inputs change
         document.getElementById('symbol').addEventListener('change', saveSettings);
         document.getElementById('symbol').addEventListener('input', function() {
             // Auto-uppercase as user types
             this.value = this.value.toUpperCase();
         });
+
+        document.getElementById('dataSource').addEventListener('change', function() {
+            toggleApiKeyField();
+            saveSettings();
+        });
+
+        document.getElementById('apiKey').addEventListener('change', saveSettings);
     </script>
 </body>
 </html>

@@ -27,12 +27,13 @@ console.error = function(...args) {
 
 // Configuration
 const DEFAULT_SYMBOL = 'AAPL';
+const DEFAULT_DATA_SOURCE = 'yahoo';
 const UPDATE_INTERVAL = 15000; // 15 seconds
 
 // Plugin state
 let websocket = null;
 let pluginUUID = null;
-let contexts = {}; // Store context data: { symbol, lastPrice, lastChange }
+let contexts = {}; // Store context data: { symbol, dataSource, apiKey, lastPrice, lastChange }
 let updateIntervals = {};
 
 // Connect to Stream Deck
@@ -82,18 +83,22 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
 function onWillAppear(context, payload) {
     console.log('[Stock Ticker] Button appeared:', context);
 
-    // Get symbol from settings or use default
+    // Get settings or use defaults
     const settings = payload.settings || {};
     const symbol = settings.symbol || DEFAULT_SYMBOL;
+    const dataSource = settings.dataSource || DEFAULT_DATA_SOURCE;
+    const apiKey = settings.apiKey || '';
 
     // Store context with settings
     contexts[context] = {
         symbol: symbol,
+        dataSource: dataSource,
+        apiKey: apiKey,
         lastPrice: null,
         lastChange: null
     };
 
-    console.log('[Stock Ticker] Using symbol:', symbol);
+    console.log('[Stock Ticker] Using symbol:', symbol, 'source:', dataSource);
 
     // Fetch stock price immediately
     fetchStockPrice(context);
@@ -112,14 +117,18 @@ function onDidReceiveSettings(context, payload) {
 
     const settings = payload.settings || {};
     const symbol = settings.symbol || DEFAULT_SYMBOL;
+    const dataSource = settings.dataSource || DEFAULT_DATA_SOURCE;
+    const apiKey = settings.apiKey || '';
 
-    // Update context with new symbol
+    // Update context with new settings
     if (contexts[context]) {
         contexts[context].symbol = symbol;
+        contexts[context].dataSource = dataSource;
+        contexts[context].apiKey = apiKey;
         contexts[context].lastPrice = null;
         contexts[context].lastChange = null;
 
-        console.log('[Stock Ticker] Symbol changed to:', symbol);
+        console.log('[Stock Ticker] Settings changed - symbol:', symbol, 'source:', dataSource);
 
         // Fetch new stock price immediately
         fetchStockPrice(context);
@@ -152,9 +161,31 @@ function fetchStockPrice(context) {
     }
 
     const symbol = contextData.symbol;
-    console.log('[Stock Ticker] Fetching stock price for', symbol);
+    const dataSource = contextData.dataSource || DEFAULT_DATA_SOURCE;
+    const apiKey = contextData.apiKey || '';
 
-    // Using Yahoo Finance with User-Agent header to avoid rate limiting
+    console.log('[Stock Ticker] Fetching stock price for', symbol, 'from', dataSource);
+
+    // Route to appropriate data source
+    switch (dataSource) {
+        case 'yahoo':
+            fetchFromYahoo(context, symbol);
+            break;
+        case 'alphavantage':
+            fetchFromAlphaVantage(context, symbol, apiKey);
+            break;
+        case 'finnhub':
+            fetchFromFinnhub(context, symbol, apiKey);
+            break;
+        default:
+            console.error('[Stock Ticker] Unknown data source:', dataSource);
+            fetchFromYahoo(context, symbol); // Fallback to Yahoo
+    }
+}
+
+// Fetch from Yahoo Finance
+function fetchFromYahoo(context, symbol) {
+    // Using Yahoo Finance chart endpoint (most reliable)
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
 
     const options = {
@@ -204,9 +235,11 @@ function fetchStockPrice(context) {
                     if (meta.postMarketPrice && meta.postMarketPrice !== currentPrice) {
                         currentPrice = meta.postMarketPrice;
                         isAfterHours = true;
+                        console.log('[Stock Ticker] Using post-market price:', currentPrice);
                     } else if (meta.preMarketPrice && meta.preMarketPrice !== currentPrice) {
                         currentPrice = meta.preMarketPrice;
                         isAfterHours = true;
+                        console.log('[Stock Ticker] Using pre-market price:', currentPrice);
                     }
 
                     const previousClose = meta.chartPreviousClose || meta.previousClose;
@@ -220,7 +253,7 @@ function fetchStockPrice(context) {
                         contextData.lastChange = change;
                     }
 
-                    console.log('[Stock Ticker] Price:', currentPrice, 'Change:', change.toFixed(2), '(' + changePercent.toFixed(2) + '%)');
+                    console.log('[Stock Ticker] Price:', currentPrice, 'Change:', change.toFixed(2), '(' + changePercent.toFixed(2) + '%)', isAfterHours ? '(After Hours)' : '');
 
                     updateButton(context, currentPrice, change, changePercent, isAfterHours);
                 } else {
@@ -233,7 +266,138 @@ function fetchStockPrice(context) {
             }
         });
     }).on('error', function(error) {
-        console.error('[Stock Ticker] Error fetching stock price:', error);
+        console.error('[Stock Ticker] Error fetching from Yahoo:', error);
+        updateButton(context, null, null, null, false);
+    });
+}
+
+// Fetch from Alpha Vantage
+function fetchFromAlphaVantage(context, symbol, apiKey) {
+    if (!apiKey) {
+        console.error('[Stock Ticker] Alpha Vantage requires an API key');
+        updateButton(context, null, null, null, false);
+        return;
+    }
+
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
+
+    const options = {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+    };
+
+    https.get(url, options, function(res) {
+        let data = '';
+
+        res.on('data', function(chunk) {
+            data += chunk;
+        });
+
+        res.on('end', function() {
+            if (res.statusCode !== 200) {
+                console.error('[Stock Ticker] Alpha Vantage HTTP error:', res.statusCode);
+                updateButton(context, null, null, null, false);
+                return;
+            }
+
+            try {
+                const json = JSON.parse(data);
+                const quote = json['Global Quote'];
+
+                if (!quote || !quote['05. price']) {
+                    console.error('[Stock Ticker] Invalid Alpha Vantage response');
+                    updateButton(context, null, null, null, false);
+                    return;
+                }
+
+                const currentPrice = parseFloat(quote['05. price']);
+                const previousClose = parseFloat(quote['08. previous close']);
+                const change = currentPrice - previousClose;
+                const changePercent = (change / previousClose) * 100;
+
+                // Store in context
+                const contextData = contexts[context];
+                if (contextData) {
+                    contextData.lastPrice = currentPrice;
+                    contextData.lastChange = change;
+                }
+
+                console.log('[Stock Ticker] Alpha Vantage - Price:', currentPrice, 'Change:', change.toFixed(2));
+
+                updateButton(context, currentPrice, change, changePercent, false);
+            } catch (error) {
+                console.error('[Stock Ticker] Error parsing Alpha Vantage response:', error);
+                updateButton(context, null, null, null, false);
+            }
+        });
+    }).on('error', function(error) {
+        console.error('[Stock Ticker] Error fetching from Alpha Vantage:', error);
+        updateButton(context, null, null, null, false);
+    });
+}
+
+// Fetch from Finnhub
+function fetchFromFinnhub(context, symbol, apiKey) {
+    if (!apiKey) {
+        console.error('[Stock Ticker] Finnhub requires an API key');
+        updateButton(context, null, null, null, false);
+        return;
+    }
+
+    const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
+
+    const options = {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+    };
+
+    https.get(url, options, function(res) {
+        let data = '';
+
+        res.on('data', function(chunk) {
+            data += chunk;
+        });
+
+        res.on('end', function() {
+            if (res.statusCode !== 200) {
+                console.error('[Stock Ticker] Finnhub HTTP error:', res.statusCode);
+                updateButton(context, null, null, null, false);
+                return;
+            }
+
+            try {
+                const json = JSON.parse(data);
+
+                if (!json.c || json.c === 0) {
+                    console.error('[Stock Ticker] Invalid Finnhub response');
+                    updateButton(context, null, null, null, false);
+                    return;
+                }
+
+                const currentPrice = json.c; // Current price
+                const previousClose = json.pc; // Previous close
+                const change = currentPrice - previousClose;
+                const changePercent = (change / previousClose) * 100;
+
+                // Store in context
+                const contextData = contexts[context];
+                if (contextData) {
+                    contextData.lastPrice = currentPrice;
+                    contextData.lastChange = change;
+                }
+
+                console.log('[Stock Ticker] Finnhub - Price:', currentPrice, 'Change:', change.toFixed(2));
+
+                updateButton(context, currentPrice, change, changePercent, false);
+            } catch (error) {
+                console.error('[Stock Ticker] Error parsing Finnhub response:', error);
+                updateButton(context, null, null, null, false);
+            }
+        });
+    }).on('error', function(error) {
+        console.error('[Stock Ticker] Error fetching from Finnhub:', error);
         updateButton(context, null, null, null, false);
     });
 }

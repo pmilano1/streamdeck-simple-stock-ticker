@@ -2,7 +2,7 @@
 	"Actions": [
 		{
 			"Icon": "images/icon",
-			"Name": "Simple Stock Ticker",
+			"Name": "Ticker",
 			"States": [
 				{
 					"Image": "images/key-green",
@@ -25,14 +25,14 @@
 	],
 	"SDKVersion": 2,
 	"Author": "pmilano1",
-	"Category": "Finance",
+	"Category": "Simple Stock Ticker",
 	"CategoryIcon": "images/category",
 	"CodePath": "launch.sh",
 	"CodePathWin": "launch.bat",
 	"CodePathMac": "launch.sh",
-	"Description": "Real-time stock price ticker",
+	"Description": "Display real-time stock prices on your Stream Deck. Track multiple stocks with live price updates, percentage changes, and visual indicators for gains (green) and losses (red). Supports Yahoo Finance (free), Alpha Vantage, and Finnhub APIs with after-hours trading data. Perfect for investors, traders, and anyone monitoring the stock market.",
 	"Name": "Simple Stock Ticker",
-	"Icon": "images/icon",
+	"Icon": "images/plugin-icon",
 	"URL": "https://github.com/pmilano1/streamdeck-simple-stock-ticker",
 	"UUID": "com.pmilano1.simplestockticker",
 	"Version": "1.0.0.0",
