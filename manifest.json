@@ -35,7 +35,7 @@
 	"Icon": "images/plugin-icon",
 	"URL": "https://github.com/pmilano1/streamdeck-simple-stock-ticker",
 	"UUID": "com.pmilano1.simplestockticker",
-	"Version": "1.0.0.0",
+	"Version": "1.0.1.0",
 	"OS": [
 		{
 			"Platform": "windows",
