@@ -25,4 +25,13 @@ Thumbs.db
 # Build outputs
 dist/
 build/
+*.streamDeckPlugin
 
+# Internal documentation (not for public GitHub)
+ELGATO-RESUBMISSION-MESSAGE.md
+GITHUB-SUBMISSION-CHECKLIST.md
+CHANGES-SUMMARY.md
+RESUBMISSION-CHECKLIST.md
+
+# Image generation scripts (optional - can be included if you want)
+images/generate-*.ps1
